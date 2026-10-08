@@ -96,6 +96,46 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
 .tiles{display:flex;gap:4px;margin-bottom:.4rem}.tiles i{font-style:normal;width:28px;height:28px;display:grid;place-items:center;border-radius:6px;color:#fff;font:800 .95rem "Segoe UI",system-ui,sans-serif;background:linear-gradient(135deg,#ea580c,#9a3412);box-shadow:0 2px 6px rgba(154,52,18,.35)}
 .brandrow.big{gap:1rem}
 #signup .seg label{display:flex;flex-direction:row;align-items:center;gap:.4rem;font-weight:500}#setup label.chkl{display:flex;flex-direction:row;align-items:center;gap:.5rem;font-weight:500}
+
+/* ---- visual hierarchy ---- */
+:root{--sh:0 1px 2px rgba(35,27,22,.06),0 6px 18px rgba(35,27,22,.05);--soft:#fff3ea}
+[data-theme=dark]{--soft:#2e221b;--sh:0 1px 2px rgba(0,0,0,.3)}
+h2{font-size:clamp(1.55rem,2.6vw,2rem);letter-spacing:-.015em}
+h3{font-size:1.02rem}
+.card{box-shadow:var(--sh)}
+.ph{margin-bottom:1.5rem}.ph h2{margin:0}.ph p{margin:.25rem 0 0;color:var(--mute);font-size:.95rem}
+.lbl{display:block;font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--mute)}
+.ic{width:18px;height:18px;flex:none}
+nav button{display:flex;align-items:center;gap:.75rem;padding:.6rem .8rem;font-weight:500}
+nav button.on{background:rgba(255,255,255,.14);box-shadow:inset 3px 0 0 #fb923c;font-weight:700}
+.hero{display:flex;justify-content:space-between;align-items:center;gap:1rem;flex-wrap:wrap;margin-bottom:1.3rem;border:0;color:#fff;padding:1.4rem 1.5rem}
+.hero.s-high{background:linear-gradient(135deg,#c0392b,#7f1d1d)}
+.hero.s-watch{background:linear-gradient(135deg,#92400e,#78350f)}
+.hero.s-safe{background:linear-gradient(135deg,#2f7d4f,#1b4d31)}
+.hero h3{font-size:1.4rem;margin:.15rem 0 .25rem}.hero p{margin:0;opacity:.93}.hero .lbl{color:rgba(255,255,255,.85)}
+.hero .row{display:flex;align-items:center;gap:1.4rem;flex-wrap:wrap}
+.btn.light{background:#fff;color:#7c2d12}
+.btn.danger{background:transparent;color:var(--high);border:1px solid var(--high)}.btn.danger:hover{background:var(--high);color:#fff;filter:none}
+[data-theme=dark] .btn.danger{color:#f87171;border-color:#f87171}[data-theme=dark] .btn.danger:hover{background:#f87171;color:#2a1306}
+.kpi{position:relative;padding:1.05rem 1.1rem 1.05rem 1.35rem;overflow:hidden}
+.kpi::before{content:'';position:absolute;left:0;top:0;bottom:0;width:5px;background:var(--accent)}
+.kpi.k-high::before{background:var(--high)}.kpi.k-watch::before{background:var(--watch)}
+.kpi b{display:block;font-size:2.1rem;line-height:1.1;margin-top:.25rem}
+.pbar{height:6px;border-radius:4px;background:var(--line);margin-top:.4rem;overflow:hidden;min-width:72px}.pbar i{display:block;height:100%}
+thead th{background:var(--soft);font-weight:700}
+tbody tr:hover{background:var(--soft)}
+.card.stack+.card.stack{margin-top:1rem}
+.card.stack h3{padding-bottom:.4rem;border-bottom:1px solid var(--line)}
+.danger-zone{border-color:var(--high)}.danger-zone h3{color:var(--high)}
+.subj .top{display:flex;justify-content:space-between;align-items:baseline;gap:.5rem}
+.subj h3{margin:.15rem 0 .5rem}
+h3.sec{margin:1.8rem 0 .6rem}
+@media(min-width:801px){aside{position:sticky;top:0;height:100vh;overflow-y:auto;align-self:start}}
+.okbox{background:#e8f5ec;border:1px solid var(--safe);border-left:6px solid var(--safe);color:#14452a;border-radius:var(--r);padding:.85rem 1.1rem;margin-top:1rem;line-height:1.5}
+.okbox b{display:block;font-size:1.08rem;margin-bottom:.15rem}.okbox .small{color:#2f5d43}
+[data-theme=dark] .okbox{background:#15301f;color:#c9f2d6;border-color:#4ade80}[data-theme=dark] .okbox .small{color:#9fd8b3}
+.toast{bottom:auto;top:calc(env(safe-area-inset-top,0px) + 1rem);transform:translate(-50%,-160%);font-size:1rem;font-weight:600;padding:.85rem 1.3rem;border-left:5px solid #4ade80;box-shadow:0 8px 24px rgba(0,0,0,.28);z-index:60;max-width:92vw}
+.toast.show{transform:translate(-50%,0)}
 </style>
 </head>
 <body>
@@ -224,6 +264,7 @@ const why = (e, tail) => {
   const m = String(e && e.message);
   return 'Offline: ' + (/HTTP 40[13]/.test(m) ? 'Firebase rules block access, publish the rules again' : /HTTP 404/.test(m) ? 'database link not found, check the link' : 'cannot reach the server (check internet, and open the site from its GitHub Pages link)') + '. ' + tail;
 };
+const syncNote = t => { const e = $('#saveSync'); if (e) e.textContent = ' ' + t; };
 const rkey = r => r.reg + '_' + r.course + '_' + r.date;
 // status is shown to the admin only; the sign-in page shows it only when the server cannot be reached
 const setNet = t => ['#netst', '#netst2'].forEach(i => {
@@ -245,8 +286,8 @@ async function push() {
     if (fullRecs) { fullRecs = false; dirty.clear(); await rq('PUT', '/records', recMap()); }
     else if (dirty.size) { const all = recMap(), m = {}; dirty.forEach(k => { if (all[k]) m[k] = all[k]; }); dirty.clear(); await rq('PATCH', '/records', m); }
     if (coreDirty) { coreDirty = false; const core = { ...db }; delete core.records; await rq('PUT', '/core', JSON.stringify(core)); }
-    net.ver = Date.now(); await rq('PUT', '/ver', net.ver); setNet('Synced with server');
-  } catch (e) { coreDirty = true; setNet(why(e, 'Changes are kept on this device.')); }
+    net.ver = Date.now(); await rq('PUT', '/ver', net.ver); setNet('Synced with server'); syncNote('Synced to the server.');
+  } catch (e) { coreDirty = true; fullRecs = true; setNet(why(e, 'Changes are kept on this device.')); syncNote('Saved on this device. The server could not be reached, so it will try again automatically.'); }
   net.busy = false;
 }
 async function pull(force) {
@@ -281,7 +322,7 @@ async function boot() {
     else await pull(true);
   } catch (e) { setNet(why(e, 'Using the data saved on this device.')); }
   net.offline = !net.ready; authView(authCur);
-  setInterval(() => { if (!net.ready) pull(true); else pull(false); }, 6000);
+  setInterval(() => { if (net.ready && (coreDirty || dirty.size || fullRecs)) push(); else pull(!net.ready); }, 6000);
 }
 let user = null;
 let tab = 'dash';
@@ -441,7 +482,7 @@ function doSignup() {
   showSignup(false); document.querySelector('[name=role][value=' + role + ']').checked = true; $('#uid').value = id; toast(note);
 }
 function acct() {
-  return `<h2>Account</h2>${user.role === 'admin' ? `<div class="card acct" style="max-width:420px;display:grid;gap:.8rem;margin-bottom:1rem"><h3>Profile</h3>
+  return `${head('Account', 'Your sign-in details.')}${user.role === 'admin' ? `<div class="card acct" style="max-width:420px;display:grid;gap:.8rem;margin-bottom:1rem"><h3>Profile</h3>
     <label>Your name (shown in the sidebar)<input id="adName" maxlength="40" value="${esc(db.admin.name)}"></label>
     <label>Login ID (what you type on the sign-in page)<input id="adId" maxlength="20" autocapitalize="off" value="${esc(db.admin.id)}"></label>
     <p class="small">Login ID: 3 to 20 letters, numbers, dot, dash or underscore. Remember it, because you need it to sign in.</p>
@@ -479,11 +520,18 @@ function resetPw() {
 function logout() { user = null; $('#app').hidden = true; $('#login').hidden = false; authView('login'); window.scrollTo(0, 0); }
 
 /* ---------- shell ---------- */
+const ICONS = {"dash": "<rect x=\"3\" y=\"3\" width=\"7\" height=\"9\"/><rect x=\"14\" y=\"3\" width=\"7\" height=\"5\"/><rect x=\"14\" y=\"12\" width=\"7\" height=\"9\"/><rect x=\"3\" y=\"16\" width=\"7\" height=\"5\"/>", "students": "<path d=\"M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2\"/><circle cx=\"9\" cy=\"7\" r=\"4\"/><path d=\"M23 21v-2a4 4 0 0 0-3-3.87\"/><path d=\"M16 3.13a4 4 0 0 1 0 7.75\"/>", "programs": "<path d=\"M4 19.5A2.5 2.5 0 0 1 6.5 17H20\"/><path d=\"M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z\"/>", "faculty": "<path d=\"M22 10L12 5 2 10l10 5 10-5z\"/><path d=\"M6 12v5c3 2 9 2 12 0v-5\"/>", "entry": "<path d=\"M9 11l3 3L22 4\"/><path d=\"M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11\"/>", "alerts": "<path d=\"M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9\"/><path d=\"M13.73 21a2 2 0 0 1-3.46 0\"/>", "settings": "<line x1=\"4\" y1=\"21\" x2=\"4\" y2=\"14\"/><line x1=\"4\" y1=\"10\" x2=\"4\" y2=\"3\"/><line x1=\"12\" y1=\"21\" x2=\"12\" y2=\"12\"/><line x1=\"12\" y1=\"8\" x2=\"12\" y2=\"3\"/><line x1=\"20\" y1=\"21\" x2=\"20\" y2=\"16\"/><line x1=\"20\" y1=\"12\" x2=\"20\" y2=\"3\"/><line x1=\"1\" y1=\"14\" x2=\"7\" y2=\"14\"/><line x1=\"9\" y1=\"8\" x2=\"15\" y2=\"8\"/><line x1=\"17\" y1=\"16\" x2=\"23\" y2=\"16\"/>", "acct": "<path d=\"M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2\"/><circle cx=\"12\" cy=\"7\" r=\"4\"/>", "me": "<rect x=\"3\" y=\"4\" width=\"18\" height=\"18\" rx=\"2\"/><path d=\"M16 2v4M8 2v4M3 10h18\"/>"};
+const ic = k => '<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + ICONS[k] + '</svg>';
+function head(t, sub) { return `<header class="ph"><h2>${t}</h2>${sub ? `<p class="small">${sub}</p>` : ''}</header>`; }
+function ring(p) {
+  const C = 2 * Math.PI * 52, d = Math.min(100, Math.max(0, p)) / 100 * C;
+  return `<svg viewBox="0 0 120 120" width="128" role="img" aria-label="Overall attendance ${p.toFixed(0)} percent"><circle cx="60" cy="60" r="52" fill="none" stroke="rgba(255,255,255,.28)" stroke-width="12"/><circle cx="60" cy="60" r="52" fill="none" stroke="#fff" stroke-width="12" stroke-linecap="round" stroke-dasharray="${d} ${C}" transform="rotate(-90 60 60)"/><text x="60" y="69" text-anchor="middle" font-size="27" font-weight="800" fill="#fff">${p.toFixed(0)}%</text></svg>`;
+}
 function render() {
   const tabs = user.role === 'admin'
     ? [['dash', 'Dashboard'], ['students', 'Students'], ['programs', 'Programs'], ['faculty', 'Faculty' + (db.pending.length ? ' (' + db.pending.length + ')' : '')], ['entry', 'Add attendance'], ['alerts', 'Alerts'], ['settings', 'Settings'], ['acct', 'Account']]
     : user.role === 'faculty' ? [['students', 'Students'], ['entry', 'Add attendance'], ['acct', 'Account']] : [['me', 'My attendance'], ['acct', 'Account']];
-  $('#nav').innerHTML = tabs.map(t => `<button class="${t[0] === tab ? 'on' : ''}" onclick="go('${t[0]}')">${t[1]}</button>`).join('');
+  $('#nav').innerHTML = tabs.map(t => `<button class="${t[0] === tab ? 'on' : ''}" onclick="go('${t[0]}')">${ic(t[0])}${t[1]}</button>`).join('');
   $('#whoami').textContent = user.name + (user.reg ? ' (' + user.reg + ')' : '');
   $('#netst').hidden = user.role !== 'admin';
   $('#view').innerHTML = { dash, students, programs, faculty, entry, alerts, settings, me, acct }[tab]();
@@ -491,7 +539,7 @@ function render() {
   if (tab === 'settings') editFill();
 }
 function go(t) { tab = t; render(); }
-function toast(m) { const t = $('#toast'); t.textContent = m; t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 2500); }
+function toast(m) { const t = $('#toast'); t.textContent = m; t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 4000); }
 
 /* ---------- admin views ---------- */
 function dash() {
@@ -504,11 +552,13 @@ function dash() {
     const a = r.reduce((x, y) => x + y.pct, 0) / r.length;
     return `<div class="bar"><span>${esc(p)} (${r.length})</span><div class="track"><i class="bg-${level(a)}" style="width:${a}%"></i></div><b>${a.toFixed(0)}%</b></div>`;
   }).join('');
-  return `<h2>Dashboard</h2>${empty}<div class="stats">
-    <div class="card stat"><b>${all.length}</b>Students</div>
-    <div class="card stat"><b>${avg.toFixed(1)}%</b>Average attendance</div>
-    <div class="card stat"><b style="color:var(--high)">${high}</b>High risk</div>
-    <div class="card stat"><b style="color:var(--watch)">${watch}</b>On watch</div></div>
+  const hero = !all.length ? '' : high ? `<div class="card hero s-high"><div><span class="lbl">Needs attention</span><h3>${high} student${high === 1 ? ' is' : 's are'} at high risk</h3><p>${watch} more on watch. Review them first and send a reminder.</p></div><button class="btn light" onclick="f.risk='high';go('students')">Review high risk students</button></div>`
+    : `<div class="card hero s-safe"><div><span class="lbl">All clear</span><h3>No student is at high risk</h3><p>${watch} on watch.</p></div></div>`;
+  return `${head('Dashboard', 'Attendance overview for every program')}${empty}${hero}<div class="stats">
+    <div class="card stat kpi"><span class="lbl">Students</span><b>${all.length}</b></div>
+    <div class="card stat kpi"><span class="lbl">Average attendance</span><b>${avg.toFixed(1)}%</b></div>
+    <div class="card stat kpi k-high"><span class="lbl">High risk</span><b>${high}</b></div>
+    <div class="card stat kpi k-watch"><span class="lbl">On watch</span><b>${watch}</b></div></div>
     <div class="grid2" style="margin-bottom:1rem"><div class="card"><h3>Daily attendance trend</h3>${lineChart()}</div><div class="card"><h3>Risk split</h3>${donut(all.length - high - watch, watch, high)}</div></div>
     <div class="card"><h3>Average attendance by program</h3><div class="bars">${bars}</div>
     <p class="small">Safe is ${db.thr}% or more. Watch is within 10 points below. High risk is lower than that.</p></div>`;
@@ -541,10 +591,10 @@ function students() {
   const opt = (v, t, cur) => `<option value="${v}" ${String(cur) === String(v) ? 'selected' : ''}>${t}</option>`;
   const r = rows();
   const body = r.length ? r.map(s => `<tr><td>${esc(s.name)}</td><td>${s.reg}</td><td>${esc(s.prog)} · Sem ${s.sem}</td><td>${s.att}/${s.held}</td>
-    <td><b>${s.pct.toFixed(1)}%</b></td><td>${arrow(s.tr)}</td><td>${badge(s.pct)}</td><td>${need(s) ? need(s) + ' classes' : '-'}</td>
+    <td><b>${s.pct.toFixed(1)}%</b><div class="pbar"><i class="bg-${level(s.pct)}" style="width:${s.pct}%"></i></div></td><td>${arrow(s.tr)}</td><td>${badge(s.pct)}</td><td>${need(s) ? need(s) + ' classes' : '-'}</td>
     <td><button class="link" onclick="showHistory('${s.reg}')">History</button></td></tr>`).join('')
     : '<tr><td colspan="9">No students match these filters. Clear a filter to see more.</td></tr>';
-  return `<h2>Students</h2><div class="filters">
+  return `${head('Students', 'Search, sort and filter. Open a student to see history and a what-if forecast.')}<div class="filters">
     <input placeholder="Search name or reg. no." value="${esc(f.q)}" oninput="f.q=this.value;keep(this)" aria-label="Search">
     <select onchange="f.prog=this.value;f.course='';render()" aria-label="Program">${opt('', 'All programs', f.prog)}${Object.keys(db.programs).map(p => opt(p, p, f.prog)).join('')}</select>
     <select onchange="f.course=this.value;render()" aria-label="Subject">${opt('', 'All courses', f.course)}${COURSES.filter(c => !f.prog || c.prog === f.prog).map(c => opt(c.code, c.code + ' ' + c.name, f.course)).join('')}</select>
@@ -583,7 +633,7 @@ function programs() {
       ${sems.map((subs, i) => `<h4 style="margin:.8rem 0 .2rem">Semester ${i + 1}</h4>` + (subs.length ? '<ul>' + subs.map((x, j) => `<li>${esc(x)} <button class="link" onclick="delSubject('${esc(p)}',${i},${j})">remove</button></li>`).join('') + '</ul>' : '<p class="small">No subjects yet.</p>')).join('')}</details>`;
   }).join('');
   const po = Object.keys(db.programs).map(p => `<option>${p}</option>`).join('');
-  return `<h2>Programs and subjects</h2>${list}<div class="grid2" style="margin-top:1rem">
+  return `${head('Programs and subjects', 'Every program with its semester-wise subjects.')}${list}<div class="grid2" style="margin-top:1rem">
     <div class="card acct" style="display:grid;gap:.8rem"><h3>Add a program</h3><label>Program name<input id="apName" maxlength="40" placeholder="e.g. B.Tech Data Science"></label>
     <button class="btn" onclick="addProgram()">Add program</button></div>
     <div class="card acct" style="display:grid;gap:.8rem"><h3>Add a subject</h3><label>Program<select id="asPrg">${po}</select></label>
@@ -611,12 +661,13 @@ function addSubject() {
 
 function entry() {
   const today = new Date().toISOString().slice(0, 10);
-  return `<h2>Add attendance</h2><div class="stack"><div class="card">
+  return `${head('Add attendance', 'Mark one class at a time, or import many rows from a CSV file.')}<div class="stack"><div class="card">
     <h3>Mark a class</h3><div class="filters">
     <select id="ePrg" onchange="fillCourses()" aria-label="Program">${[...new Set(myCourses().map(c => c.prog))].map(p => `<option>${p}</option>`).join('')}</select>
     <select id="eCourse" onchange="fillList()" aria-label="Subject"></select>
     <input type="date" id="eDate" value="${today}" aria-label="Date"></div>
-    <div id="eList" class="chk"></div><p class="small">Medical and duty leave count as present.</p><button class="btn" onclick="saveEntry()">Save attendance</button></div>
+    <div id="eList" class="chk"></div><p class="small">Medical and duty leave count as present.</p><button class="btn" onclick="saveEntry()">Save attendance</button>
+    <div id="saveMsg" class="okbox" role="status" hidden></div></div>
     <div class="card"><h3>Import from CSV</h3>
     <p class="small">One row per student per class: <code>reg,course,date,status</code>. Example: <code>12615128,CSE326,2026-10-05,P</code>. Status is P, A, ML or DL.</p>
     <input type="file" accept=".csv" onchange="importCSV(this.files[0])" aria-label="CSV file"></div></div>`;
@@ -639,8 +690,14 @@ function setRecord(reg, course, date, p, l) {
 function saveEntry() {
   const course = $('#eCourse').value, date = $('#eDate').value;
   if (!course || !date) { toast('Choose a subject and a date first.'); return; }
-  document.querySelectorAll('#eList select').forEach(i => setRecord(i.dataset.reg, course, date, i.value !== 'A', /^(ML|DL)$/.test(i.value) ? i.value : ''));
-  save(); toast('Attendance saved for ' + course + ' on ' + date + '.');
+  [...document.querySelectorAll('#eList select')].forEach(i => setRecord(i.dataset.reg, course, date, i.value !== 'A', /^(ML|DL)$/.test(i.value) ? i.value : ''));
+  const sel = [...document.querySelectorAll('#eList select')];
+  if (!sel.length) { toast('There are no students to mark for this subject.'); return; }
+  const ab = sel.filter(i => i.value === 'A').length, lv = sel.filter(i => /^(ML|DL)$/.test(i.value)).length;
+  save();
+  const m = $('#saveMsg'); m.hidden = false;
+  m.innerHTML = `<b>&#10003; Attendance saved successfully</b>${course} on ${date}: ${sel.length} students, ${sel.length - ab - lv} present, ${ab} absent, ${lv} on leave.<span id="saveSync" class="small"> ${BASE ? 'Syncing to the server...' : 'Saved on this device.'}</span>`;
+  m.scrollIntoView({ block: 'nearest' });
 }
 function importCSV(file) {
   if (!file) return;
@@ -665,7 +722,7 @@ function alerts() {
     <div><b>${esc(s.name)}</b> (${s.reg}) is at ${s.pct.toFixed(1)}% ${badge(s.pct)}<br>
     <span class="small">Needs ${need(s)} more classes in a row to reach ${db.thr}%.</span></div>
     <button class="link" onclick="copyMsg('${s.reg}')">Copy message</button><a class="link" target="_blank" rel="noopener" href="https://wa.me/?text=${encodeURIComponent(alertMsg(s))}">WhatsApp</a><a class="link" href="mailto:?subject=${encodeURIComponent('Attendance alert')}&body=${encodeURIComponent(alertMsg(s))}">Email</a><button class="btn ${db.notified[s.reg] ? 'ghost' : ''}" onclick="notify('${s.reg}')">${db.notified[s.reg] ? 'Notified' : 'Mark as notified'}</button></div>`).join('');
-  return `<h2>Alerts</h2>${html || '<p>No students are below the limit right now.</p>'}`;
+  return `${head('Alerts', 'Students below the limit, with a ready message to send.')}${html || '<p>No students are below the limit right now.</p>'}`;
 }
 function copyMsg(reg) {
   const s = { ...db.students.find(x => x.reg === reg), ...stats(reg) };
@@ -675,28 +732,28 @@ function copyMsg(reg) {
 function notify(reg) { db.notified[reg] = !db.notified[reg]; save(); render(); }
 
 function settings() {
-  return `<h2>Settings</h2><div class="card stack"><label>Minimum attendance (%)<br>
+  return `${head('Settings', 'People, attendance limit, backup and server.')}<div class="card stack"><h3>Attendance limit</h3><label>Minimum attendance (%)<br>
     <input type="number" min="50" max="95" value="${db.thr}" onchange="setThr(this.value)"></label>
-    <h3>Add a student</h3><div class="filters"><input id="nName" placeholder="Full name" aria-label="Name"><input id="nReg" placeholder="Reg. no." aria-label="Reg no">
+    </div><div class="card stack"><h3>Add a student</h3><div class="filters"><input id="nName" placeholder="Full name" aria-label="Name"><input id="nReg" placeholder="Reg. no." aria-label="Reg no">
     <select id="nPrg" aria-label="Program">${Object.keys(db.programs).map(p => `<option>${p}</option>`).join('')}</select><select id="nSem" aria-label="Semester">${[1, 2, 3, 4, 5, 6, 7, 8].map(n => `<option>${n}</option>`).join('')}</select><button class="btn" onclick="addStudent()">Add student</button></div>
-    <h3>Clear a student's password</h3><div class="filters"><select id="rpSel" aria-label="Student">${db.students.map(s => `<option value="${s.reg}">${esc(s.name)} (${s.reg})</option>`).join('')}</select>
+    </div><div class="card stack"><h3>Clear a student's password</h3><div class="filters"><select id="rpSel" aria-label="Student">${db.students.map(s => `<option value="${s.reg}">${esc(s.name)} (${s.reg})</option>`).join('')}</select>
     <button class="btn ghost" onclick="resetPw()">Clear password</button></div>
-    <h3>Server</h3><p class="small">${BASE ? 'Connected to your Firebase database, so every phone using this site shares the same data. Status: ' + esc($('#netst').textContent) : 'No server is set up, so data stays in this browser only. To share data between phones, paste your Firebase Realtime Database URL into the server-url line at the top of index.html.'}</p>
+    </div><div class="card stack"><h3>Server</h3><p class="small">${BASE ? 'Connected to your Firebase database, so every phone using this site shares the same data. Status: ' + esc($('#netst').textContent) : 'No server is set up, so data stays in this browser only. To share data between phones, paste your Firebase Realtime Database URL into the server-url line at the top of index.html.'}</p>
     ${BASE ? '<button class="btn ghost" onclick="serverSeed()">Upload this device data to the server</button>' : ''}
-    <h3>Semester length</h3><label>Planned classes per subject this semester<br><input type="number" min="10" max="120" value="${db.total}" onchange="setTotal(this.value)"></label>
-    <h3>Import students from CSV</h3><p class="small">Columns: name,reg,program,semester. Example: Asha Roy,12615999,BCA,1. Registration numbers have 8 digits.</p>
+    </div><div class="card stack"><h3>Semester length</h3><label>Planned classes per subject this semester<br><input type="number" min="10" max="120" value="${db.total}" onchange="setTotal(this.value)"></label>
+    </div><div class="card stack"><h3>Import students from CSV</h3><p class="small">Columns: name,reg,program,semester. Example: Asha Roy,12615999,BCA,1. Registration numbers have 8 digits.</p>
     <input type="file" accept=".csv" onchange="importStudents(this.files[0])" aria-label="Students CSV">
-    <h3>Edit a student</h3><div class="filters"><select id="esSel" onchange="editFill()" aria-label="Student">${db.students.map(s => `<option value="${s.reg}">${esc(s.name)} (${s.reg})</option>`).join('')}</select>
+    <button class="btn ghost" onclick="loadSample()">Add sample students and attendance</button>
+    </div><div class="card stack"><h3>Edit a student</h3><div class="filters"><select id="esSel" onchange="editFill()" aria-label="Student">${db.students.map(s => `<option value="${s.reg}">${esc(s.name)} (${s.reg})</option>`).join('')}</select>
     <input id="esName" maxlength="40" aria-label="Name"><select id="esPrg" aria-label="Program">${Object.keys(db.programs).map(p => `<option>${p}</option>`).join('')}</select>
     <select id="esSem" aria-label="Semester">${[1, 2, 3, 4, 5, 6, 7, 8].map(n => `<option>${n}</option>`).join('')}</select></div>
     <label style="display:flex;gap:.5rem;align-items:center"><input type="checkbox" id="esClr" checked> Clear old attendance if the program or semester changes</label>
     <button class="btn" onclick="saveStudent()">Save student</button>
-    <h3>Remove a student</h3><div class="filters"><select id="dsSel" aria-label="Student">${db.students.map(s => `<option value="${s.reg}">${esc(s.name)} (${s.reg})</option>`).join('')}</select><button class="btn ghost" onclick="delStudent()">Remove student</button></div>
-    <h3>Backup and restore</h3><div class="filters"><button class="btn" onclick="backup(false)">Download backup</button><button class="btn ghost" onclick="backup(true)">Copy backup text</button></div>
+    </div><div class="card stack"><h3>Remove a student</h3><div class="filters"><select id="dsSel" aria-label="Student">${db.students.map(s => `<option value="${s.reg}">${esc(s.name)} (${s.reg})</option>`).join('')}</select><button class="btn danger" onclick="delStudent()">Remove student</button></div>
+    </div><div class="card stack"><h3>Backup and restore</h3><div class="filters"><button class="btn" onclick="backup(false)">Download backup</button><button class="btn ghost" onclick="backup(true)">Copy backup text</button></div>
     <input type="file" accept=".json" onchange="restoreFile(this.files[0])" aria-label="Backup file">
     <textarea id="bkTxt" rows="3" placeholder="Or paste backup text here" style="width:100%"></textarea><button class="btn ghost" onclick="restoreText($('#bkTxt').value)">Restore from pasted text</button>
-    <button class="btn ghost" onclick="loadSample()">Add sample students and attendance</button>
-    <button class="btn ghost" onclick="resetAll()">Reset portal (delete everything)</button></div>`;
+    </div><div class="card stack danger-zone"><h3>Danger zone</h3><p class="small">Reset deletes all students, faculty, attendance and accounts, for every phone. It cannot be undone.</p><button class="btn danger" onclick="resetAll()">Reset portal (delete everything)</button></div>`;
 }
 function addStudent() {
   if (!isAdmin()) return;
@@ -782,8 +839,8 @@ function faculty() {
   const rows = db.faculty.map(x => `<tr><td>${esc(x.name)}</td><td>${x.id}</td><td>${x.courses.join(', ') || '-'}</td>
     <td><input id="fp_${x.id}" type="password" placeholder="new password" aria-label="New password for ${x.id}"> <button class="link" onclick="facPw('${x.id}')">Set password</button> <button class="link" onclick="facDel('${x.id}')">Remove</button></td></tr>`).join('');
   const pend = db.pending.length ? `<h3>Waiting for approval</h3>` + db.pending.map(x => `<div class="card alert watch"><div><b>${esc(x.name)}</b> (${x.id}) asks for ${x.courses.join(', ')}</div>
-    <div><button class="btn" onclick="facOk('${x.id}')">Approve</button> <button class="btn ghost" onclick="facNo('${x.id}')">Reject</button></div></div>`).join('') : '';
-  return `<h2>Faculty</h2>${pend}<div class="tw"><table><thead><tr><th>Name</th><th>Login ID</th><th>Subjects</th><th></th></tr></thead><tbody>${rows || '<tr><td colspan="4">No faculty yet.</td></tr>'}</tbody></table></div>
+    <div><button class="btn" onclick="facOk('${x.id}')">Approve</button> <button class="btn danger" onclick="facNo('${x.id}')">Reject</button></div></div>`).join('') : '';
+  return `${head('Faculty', 'Approve requests and manage faculty accounts.')}${pend}<div class="tw"><table><thead><tr><th>Name</th><th>Login ID</th><th>Subjects</th><th></th></tr></thead><tbody>${rows || '<tr><td colspan="4">No faculty yet.</td></tr>'}</tbody></table></div>
     <div class="card acct" style="max-width:520px;display:grid;gap:.8rem;margin-top:1rem"><h3>Add faculty</h3>
     <label>Name<input id="fcName" maxlength="40"></label><label>Login ID<input id="fcId" maxlength="20" autocapitalize="off"></label>
     <label>Password (at least 6 characters)<input id="fcPw" type="password"></label>
@@ -831,17 +888,19 @@ function exportCSV() {
 
 /* ---------- student view ---------- */
 function me() {
-  const st = db.students.find(s => s.reg === user.reg), all = stats(st.reg);
+  const st = db.students.find(s => s.reg === user.reg), all = stats(st.reg), lv = level(all.pct);
   const cards = subjFor(st).map(c => {
     const t = stats(st.reg, c.code);
-    return `<div class="card"><h3>${c.code} ${esc(c.name)}</h3><b style="font-size:1.8rem">${t.pct.toFixed(1)}%</b> ${badge(t.pct)}
+    return `<div class="card subj"><span class="lbl">${c.code}</span><h3>${esc(c.name)}</h3>
+      <div class="top"><b style="font-size:1.9rem">${t.pct.toFixed(1)}%</b>${badge(t.pct)}</div><div class="pbar"><i class="bg-${level(t.pct)}" style="width:${t.pct}%"></i></div>
       <p class="small">${t.att} of ${t.held} classes attended. ${planText(t)}</p></div>`;
   }).join('');
   const log = db.records.filter(x => x.reg === st.reg).sort((a, b) => b.date.localeCompare(a.date)).slice(0, 30)
     .map(x => `<tr><td>${x.date}</td><td>${x.course}</td><td>${stat(x)}</td></tr>`).join('');
-  return `<h2>Hello, ${esc(st.name.split(' ')[0])}</h2><p class="small">${esc(st.prog)}, Semester ${st.sem}</p>
-    <p>Overall attendance: <b>${all.pct.toFixed(1)}%</b> ${badge(all.pct)}</p>
-    <div class="grid2">${cards}</div><h3 style="margin-top:1.5rem">Day by day</h3>${heat(st.reg)}<h3 style="margin-top:1.5rem">Recent classes</h3>
+  const msg = all.pct >= db.thr ? `You are above the ${db.thr}% limit. Keep it up.` : `You are below the ${db.thr}% limit. Attend your next ${need(all)} classes in a row to get back on track.`;
+  return `${head('Hello, ' + esc(st.name.split(' ')[0]), esc(st.prog) + ', Semester ' + st.sem)}
+    <div class="card hero s-${lv}"><div class="row">${ring(all.pct)}<div><span class="lbl">Overall attendance</span><h3>${LABEL[lv]}</h3><p>${msg}</p></div></div></div>
+    <div class="grid2">${cards}</div><h3 class="sec">Day by day</h3>${heat(st.reg)}<h3 class="sec">Recent classes</h3>
     <div class="tw"><table style="min-width:0"><thead><tr><th>Date</th><th>Course</th><th>Status</th></tr></thead><tbody>${log}</tbody></table></div>`;
 }
 
