@@ -45,10 +45,21 @@ Medical and duty leave count as present.
 
 ## Technologies
 
-- HTML, CSS and JavaScript (single file, no framework)
+- HTML, CSS and JavaScript (three separate files, no framework)
 - SVG for the logo and charts
 - Firebase Realtime Database (REST API) so data is shared across phones
 - GitHub Pages for hosting
+
+## Project structure
+
+| File | What it contains |
+|---|---|
+| `index.html` | Page structure (sign-in, setup and app shell), logo symbol, and the `server-url` line for the database |
+| `style.css` | Design tokens, layout, components, light and dark theme, responsive rules |
+| `app.js` | All logic: data, accounts and roles, attendance maths, views, charts, CSV import, server sync |
+| `README.md` | This file |
+
+Keep the three files in the same folder, because `index.html` loads `style.css` and `app.js` from it.
 
 ## Run it
 
