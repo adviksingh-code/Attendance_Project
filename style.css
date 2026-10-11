@@ -153,3 +153,4 @@ h3.sec{margin:1.8rem 0 .6rem}
 @media(max-width:520px){.dlgform .two{grid-template-columns:1fr}}
 dialog>.btn{margin-top:1rem}
 .dlgform .err{min-height:0;margin:0}
+.link.dl{color:var(--high)}

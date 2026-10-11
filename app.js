@@ -394,9 +394,9 @@ function students() {
   const r = rows();
   const body = r.length ? r.map(s => `<tr><td>${esc(s.name)}</td><td>${s.reg}</td><td>${esc(s.prog)} · Sem ${s.sem}</td><td>${s.att}/${s.held}</td>
     <td><b>${s.pct.toFixed(1)}%</b><div class="pbar"><i class="bg-${level(s.pct)}" style="width:${s.pct}%"></i></div></td><td>${arrow(s.tr)}</td><td>${badge(s.pct)}</td><td>${need(s) ? need(s) + ' classes' : '-'}</td>
-    <td><button class="link" onclick="showHistory('${s.reg}')">History</button>${isAdmin() ? ` <button class="link" onclick="showEditStudent('${s.reg}')">Edit</button>` : ''}</td></tr>`).join('')
+    <td><button class="link" onclick="showHistory('${s.reg}')">History</button>${isAdmin() ? ` <button class="link" onclick="showEditStudent('${s.reg}')">Edit</button> <button class="link dl" onclick="showRemoveStudent('${s.reg}')">Remove</button>` : ''}</td></tr>`).join('')
     : '<tr><td colspan="9">No students match these filters. Clear a filter to see more.</td></tr>';
-  return `${head('Students', 'Search, sort and filter. Open a student to see history and a what-if forecast. Admins can add and edit students here.')}<div class="filters">
+  return `${head('Students', 'Search, sort and filter. Open a student to see history and a what-if forecast. Admins can add, edit and remove students here.')}<div class="filters">
     <input placeholder="Search name or reg. no." value="${esc(f.q)}" oninput="f.q=this.value;keep(this)" aria-label="Search">
     <select onchange="f.prog=this.value;f.course='';render()" aria-label="Program">${opt('', 'All programs', f.prog)}${Object.keys(db.programs).map(p => opt(p, p, f.prog)).join('')}</select>
     <select onchange="f.course=this.value;render()" aria-label="Subject">${opt('', 'All courses', f.course)}${COURSES.filter(c => !f.prog || c.prog === f.prog).map(c => opt(c.code, c.code + ' ' + c.name, f.course)).join('')}</select>
@@ -428,6 +428,20 @@ function showEditStudent(reg) {
   if (!isAdmin()) return;
   const st = db.students.find(x => x.reg === reg); if (!st) return;
   $('#dlgBody').innerHTML = studentForm(st); dlg.showModal();
+}
+function showRemoveStudent(reg) {
+  if (!isAdmin()) return;
+  const st = db.students.find(x => x.reg === reg); if (!st) return;
+  $('#dlgBody').innerHTML = `<div class="dlgform"><h3>Remove student</h3><p>Remove <b>${esc(st.name)}</b> (${st.reg})?</p>
+    <p class="small">This deletes their account and all their attendance records, on every phone. It cannot be undone.</p>
+    <button class="btn danger" onclick="removeStudent('${st.reg}')">Yes, remove student</button></div>`;
+  dlg.showModal();
+}
+function removeStudent(reg) {
+  if (!isAdmin()) return;
+  const st = db.students.find(x => x.reg === reg); if (!st) return;
+  db.students = db.students.filter(x => x.reg !== reg); fullRecs = true; db.records = db.records.filter(x => x.reg !== reg); delete db.notified[reg];
+  save(); dlg.close(); render(); toast(st.name + ' removed.');
 }
 function addStudent() {
   if (!isAdmin()) return;
@@ -577,7 +591,7 @@ function copyMsg(reg) {
 function notify(reg) { db.notified[reg] = !db.notified[reg]; save(); render(); }
 
 function settings() {
-  return `${head('Settings', 'Attendance limit, bulk import, backup and server. Add or edit students in the Students tab.')}<div class="card stack"><h3>Attendance limit</h3><label>Minimum attendance (%)<br>
+  return `${head('Settings', 'Attendance limit, bulk import, backup and server. Add, edit or remove students in the Students tab.')}<div class="card stack"><h3>Attendance limit</h3><label>Minimum attendance (%)<br>
     <input type="number" min="50" max="95" value="${db.thr}" onchange="setThr(this.value)"></label>
     </div><div class="card stack"><h3>Clear a student's password</h3><div class="filters"><select id="rpSel" aria-label="Student">${db.students.map(s => `<option value="${s.reg}">${esc(s.name)} (${s.reg})</option>`).join('')}</select>
     <button class="btn ghost" onclick="resetPw()">Clear password</button></div>
@@ -587,7 +601,6 @@ function settings() {
     </div><div class="card stack"><h3>Import students from CSV</h3><p class="small">Columns: name,reg,program,semester,email,whatsapp (the last two are optional). Example: Asha Roy,12615999,BCA,1,asha@example.com,9876543210. Registration numbers have 8 digits.</p>
     <input type="file" accept=".csv" onchange="importStudents(this.files[0])" aria-label="Students CSV">
     <button class="btn ghost" onclick="loadSample()">Add sample students and attendance</button>
-    </div><div class="card stack"><h3>Remove a student</h3><div class="filters"><select id="dsSel" aria-label="Student">${db.students.map(s => `<option value="${s.reg}">${esc(s.name)} (${s.reg})</option>`).join('')}</select><button class="btn danger" onclick="delStudent()">Remove student</button></div>
     </div><div class="card stack"><h3>Backup and restore</h3><div class="filters"><button class="btn" onclick="backup(false)">Download backup</button><button class="btn ghost" onclick="backup(true)">Copy backup text</button></div>
     <input type="file" accept=".json" onchange="restoreFile(this.files[0])" aria-label="Backup file">
     <textarea id="bkTxt" rows="3" placeholder="Or paste backup text here" style="width:100%"></textarea><button class="btn ghost" onclick="restoreText($('#bkTxt').value)">Restore from pasted text</button>
@@ -606,12 +619,6 @@ let armKey = '';
 function twice(k) {
   if (armKey !== k) { armKey = k; toast('Click again to confirm.'); setTimeout(() => { if (armKey === k) armKey = ''; }, 4000); return false; }
   armKey = ''; return true;
-}
-function delStudent() {
-  if (!isAdmin()) return;
-  const r = $('#dsSel').value; if (!r || !twice('ds' + r)) return;
-  db.students = db.students.filter(x => x.reg !== r); fullRecs = true; db.records = db.records.filter(x => x.reg !== r); delete db.notified[r];
-  save(); render(); toast('Student removed.');
 }
 function delSubject(p, i, j) {
   if (!isAdmin()) return;
