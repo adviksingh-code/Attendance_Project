@@ -339,7 +339,6 @@ function render() {
   $('#netst').hidden = user.role !== 'admin';
   $('#view').innerHTML = { dash, students, programs, faculty, entry, alerts, settings, me, acct }[tab]();
   if (tab === 'entry') fillCourses();
-  if (tab === 'settings') editFill();
 }
 function go(t) { tab = t; render(); }
 function toast(m) { const t = $('#toast'); t.textContent = m; t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 4000); }
@@ -395,21 +394,64 @@ function students() {
   const r = rows();
   const body = r.length ? r.map(s => `<tr><td>${esc(s.name)}</td><td>${s.reg}</td><td>${esc(s.prog)} · Sem ${s.sem}</td><td>${s.att}/${s.held}</td>
     <td><b>${s.pct.toFixed(1)}%</b><div class="pbar"><i class="bg-${level(s.pct)}" style="width:${s.pct}%"></i></div></td><td>${arrow(s.tr)}</td><td>${badge(s.pct)}</td><td>${need(s) ? need(s) + ' classes' : '-'}</td>
-    <td><button class="link" onclick="showHistory('${s.reg}')">History</button></td></tr>`).join('')
+    <td><button class="link" onclick="showHistory('${s.reg}')">History</button>${isAdmin() ? ` <button class="link" onclick="showEditStudent('${s.reg}')">Edit</button>` : ''}</td></tr>`).join('')
     : '<tr><td colspan="9">No students match these filters. Clear a filter to see more.</td></tr>';
-  return `${head('Students', 'Search, sort and filter. Open a student to see history and a what-if forecast.')}<div class="filters">
+  return `${head('Students', 'Search, sort and filter. Open a student to see history and a what-if forecast. Admins can add and edit students here.')}<div class="filters">
     <input placeholder="Search name or reg. no." value="${esc(f.q)}" oninput="f.q=this.value;keep(this)" aria-label="Search">
     <select onchange="f.prog=this.value;f.course='';render()" aria-label="Program">${opt('', 'All programs', f.prog)}${Object.keys(db.programs).map(p => opt(p, p, f.prog)).join('')}</select>
     <select onchange="f.course=this.value;render()" aria-label="Subject">${opt('', 'All courses', f.course)}${COURSES.filter(c => !f.prog || c.prog === f.prog).map(c => opt(c.code, c.code + ' ' + c.name, f.course)).join('')}</select>
     <select onchange="f.sem=this.value;render()" aria-label="Semester">${opt('', 'All semesters', f.sem)}${[...new Set(COURSES.map(c => c.sem))].sort((a, b) => a - b).map(n => opt(n, 'Semester ' + n, f.sem)).join('')}</select>
     <select onchange="f.risk=this.value;render()" aria-label="Risk">${opt('', 'All risk levels', f.risk)}${opt('high', 'High risk', f.risk)}${opt('watch', 'Watch', f.risk)}${opt('safe', 'Safe', f.risk)}</select>
-    <button class="btn" onclick="exportCSV()">Export CSV</button><button class="btn ghost" onclick="window.print()">Print report</button></div>
+    ${isAdmin() ? '<button class="btn" onclick="showAddStudent()">+ Add student</button>' : ''}<button class="btn ghost" onclick="exportCSV()">Export CSV</button><button class="btn ghost" onclick="window.print()">Print report</button></div>
     <div class="tw"><table><thead><tr>${[['name','Name'],['reg','Reg. no.'],['prog','Program'],['att','Attended'],['pct','%'],['tr','Trend']].map(h => `<th><button class="link" onclick="sortBy('${h[0]}')">${h[1]}${sort.k === h[0] ? (sort.d > 0 ? ' ▲' : ' ▼') : ''}</button></th>`).join('')}<th>Risk</th><th>To reach ${db.thr}%</th><th></th></tr></thead><tbody>${body}</tbody></table></div>`;
 }
 // re-render the table while typing but keep the cursor in the search box
 function sortBy(k) { sort = { k, d: sort.k === k ? -sort.d : 1 }; render(); }
 function keep(el) { const p = el.selectionStart; render(); const n = $('.filters input'); n.focus(); n.setSelectionRange(p, p); }
 
+// add and edit a student in a popup, opened from the Students tab (admin only)
+function studentForm(st) {
+  const prg = Object.keys(db.programs).map(p => `<option ${st && st.prog === p ? 'selected' : ''}>${p}</option>`).join('');
+  const sem = [1, 2, 3, 4, 5, 6, 7, 8].map(n => `<option ${st && st.sem === n ? 'selected' : ''}>${n}</option>`).join('');
+  return `<div class="dlgform"><h3>${st ? 'Edit student' : 'Add a student'}</h3>
+    ${st ? `<p class="small">Registration number: <b>${st.reg}</b> (cannot be changed)</p>` : `<label>Registration number<input id="fReg" inputmode="numeric" maxlength="8" placeholder="8 digits"></label>`}
+    <label>Full name<input id="fName" maxlength="40" value="${st ? esc(st.name) : ''}"></label>
+    <div class="two"><label>Program<select id="fPrg">${prg}</select></label><label>Semester<select id="fSem">${sem}</select></label></div>
+    <div class="two"><label>Email (optional)<input id="fEmail" type="email" maxlength="60" value="${st ? esc(st.email || '') : ''}"></label>
+    <label>WhatsApp, 10 digits (optional)<input id="fWa" inputmode="numeric" maxlength="10" value="${st ? esc(st.wa || '') : ''}"></label></div>
+    ${st ? '<label class="chkl"><input type="checkbox" id="fClr" checked> Clear old attendance if the program or semester changes</label>' : ''}
+    <p id="stErr" class="err" role="alert"></p>
+    <button class="btn" onclick="${st ? `saveStudent('${st.reg}')` : 'addStudent()'}">${st ? 'Save student' : 'Add student'}</button></div>`;
+}
+function showAddStudent() { if (!isAdmin()) return; $('#dlgBody').innerHTML = studentForm(null); dlg.showModal(); $('#fReg').focus(); }
+function showEditStudent(reg) {
+  if (!isAdmin()) return;
+  const st = db.students.find(x => x.reg === reg); if (!st) return;
+  $('#dlgBody').innerHTML = studentForm(st); dlg.showModal();
+}
+function addStudent() {
+  if (!isAdmin()) return;
+  const err = m => { $('#stErr').textContent = m; };
+  const name = $('#fName').value.trim().replace(/\s+/g, ' '), reg = $('#fReg').value.trim();
+  if (name.length < 2) return err('Enter the full name.');
+  if (!/^\d{8}$/.test(reg)) return err('Registration number must be 8 digits.');
+  if (db.students.some(x => x.reg === reg) || fac(reg) || (db.admin && db.admin.id === reg)) return err('That registration number is already in use.');
+  const ct = readContact('#fEmail', '#fWa'); if (ct.err) return err(ct.err);
+  db.students.push({ reg, name, prog: $('#fPrg').value, sem: +$('#fSem').value, pw: '', email: ct.email, wa: ct.wa });
+  save(); dlg.close(); render(); toast(name + ' added.');
+}
+function saveStudent(reg) {
+  if (!isAdmin()) return;
+  const st = db.students.find(x => x.reg === reg); if (!st) return;
+  const err = m => { $('#stErr').textContent = m; };
+  const name = $('#fName').value.trim().replace(/\s+/g, ' ');
+  if (name.length < 2) return err('Enter a name with at least 2 characters.');
+  const ct = readContact('#fEmail', '#fWa'); if (ct.err) return err(ct.err);
+  const prog = $('#fPrg').value, sem = +$('#fSem').value, moved = prog !== st.prog || sem !== st.sem;
+  if (moved && $('#fClr').checked) { fullRecs = true; db.records = db.records.filter(r => r.reg !== st.reg); }
+  Object.assign(st, { name, prog, sem, email: ct.email, wa: ct.wa });
+  save(); dlg.close(); render(); toast(name + ' updated.');
+}
 function showHistory(reg) {
   const s = db.students.find(x => x.reg === reg);
   const courses = subjFor(s);
@@ -535,10 +577,8 @@ function copyMsg(reg) {
 function notify(reg) { db.notified[reg] = !db.notified[reg]; save(); render(); }
 
 function settings() {
-  return `${head('Settings', 'People, attendance limit, backup and server.')}<div class="card stack"><h3>Attendance limit</h3><label>Minimum attendance (%)<br>
+  return `${head('Settings', 'Attendance limit, bulk import, backup and server. Add or edit students in the Students tab.')}<div class="card stack"><h3>Attendance limit</h3><label>Minimum attendance (%)<br>
     <input type="number" min="50" max="95" value="${db.thr}" onchange="setThr(this.value)"></label>
-    </div><div class="card stack"><h3>Add a student</h3><div class="filters"><input id="nName" placeholder="Full name" aria-label="Name"><input id="nReg" placeholder="Reg. no." aria-label="Reg no"><input id="nEmail" placeholder="Email (optional)" aria-label="Email"><input id="nWa" placeholder="WhatsApp, 10 digits (optional)" aria-label="WhatsApp number">
-    <select id="nPrg" aria-label="Program">${Object.keys(db.programs).map(p => `<option>${p}</option>`).join('')}</select><select id="nSem" aria-label="Semester">${[1, 2, 3, 4, 5, 6, 7, 8].map(n => `<option>${n}</option>`).join('')}</select><button class="btn" onclick="addStudent()">Add student</button></div>
     </div><div class="card stack"><h3>Clear a student's password</h3><div class="filters"><select id="rpSel" aria-label="Student">${db.students.map(s => `<option value="${s.reg}">${esc(s.name)} (${s.reg})</option>`).join('')}</select>
     <button class="btn ghost" onclick="resetPw()">Clear password</button></div>
     </div><div class="card stack"><h3>Server</h3><p class="small">${BASE ? 'Connected to your Firebase database, so every phone using this site shares the same data. Status: ' + esc($('#netst').textContent) : 'No server is set up, so data stays in this browser only. To share data between phones, paste your Firebase Realtime Database URL into the server-url line at the top of index.html.'}</p>
@@ -547,43 +587,16 @@ function settings() {
     </div><div class="card stack"><h3>Import students from CSV</h3><p class="small">Columns: name,reg,program,semester,email,whatsapp (the last two are optional). Example: Asha Roy,12615999,BCA,1,asha@example.com,9876543210. Registration numbers have 8 digits.</p>
     <input type="file" accept=".csv" onchange="importStudents(this.files[0])" aria-label="Students CSV">
     <button class="btn ghost" onclick="loadSample()">Add sample students and attendance</button>
-    </div><div class="card stack"><h3>Edit a student</h3><div class="filters"><select id="esSel" onchange="editFill()" aria-label="Student">${db.students.map(s => `<option value="${s.reg}">${esc(s.name)} (${s.reg})</option>`).join('')}</select>
-    <input id="esName" maxlength="40" aria-label="Name"><input id="esEmail" placeholder="Email" aria-label="Email"><input id="esWa" placeholder="WhatsApp, 10 digits" aria-label="WhatsApp number"><select id="esPrg" aria-label="Program">${Object.keys(db.programs).map(p => `<option>${p}</option>`).join('')}</select>
-    <select id="esSem" aria-label="Semester">${[1, 2, 3, 4, 5, 6, 7, 8].map(n => `<option>${n}</option>`).join('')}</select></div>
-    <label style="display:flex;gap:.5rem;align-items:center"><input type="checkbox" id="esClr" checked> Clear old attendance if the program or semester changes</label>
-    <button class="btn" onclick="saveStudent()">Save student</button>
     </div><div class="card stack"><h3>Remove a student</h3><div class="filters"><select id="dsSel" aria-label="Student">${db.students.map(s => `<option value="${s.reg}">${esc(s.name)} (${s.reg})</option>`).join('')}</select><button class="btn danger" onclick="delStudent()">Remove student</button></div>
     </div><div class="card stack"><h3>Backup and restore</h3><div class="filters"><button class="btn" onclick="backup(false)">Download backup</button><button class="btn ghost" onclick="backup(true)">Copy backup text</button></div>
     <input type="file" accept=".json" onchange="restoreFile(this.files[0])" aria-label="Backup file">
     <textarea id="bkTxt" rows="3" placeholder="Or paste backup text here" style="width:100%"></textarea><button class="btn ghost" onclick="restoreText($('#bkTxt').value)">Restore from pasted text</button>
     </div><div class="card stack danger-zone"><h3>Danger zone</h3><p class="small">Reset deletes all students, faculty, attendance and accounts, for every phone. It cannot be undone.</p><button class="btn danger" onclick="resetAll()">Reset portal (delete everything)</button></div>`;
 }
-function addStudent() {
-  if (!isAdmin()) return;
-  const name = $('#nName').value.trim(), reg = $('#nReg').value.trim();
-  if (!name || !/^\d{8}$/.test(reg)) { toast('Enter a name and an 8-digit registration number.'); return; }
-  if (db.students.some(x => x.reg === reg)) { toast('That registration number already exists.'); return; }
-  const ct = readContact('#nEmail', '#nWa'); if (ct.err) { toast(ct.err); return; }
-  db.students.push({ reg, name, prog: $('#nPrg').value, sem: +$('#nSem').value, pw: '', email: ct.email, wa: ct.wa }); save(); toast(name + ' added.'); render();
-}
 function toggleTheme() {
   const t = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
   document.documentElement.dataset.theme = t;
   try { localStorage.setItem('abp_theme', t); } catch (e) { }
-}
-function editFill() {
-  const st = db.students.find(x => x.reg === $('#esSel').value); if (!st) return;
-  $('#esName').value = st.name; $('#esPrg').value = st.prog; $('#esSem').value = st.sem; $('#esEmail').value = st.email || ''; $('#esWa').value = st.wa || '';
-}
-function saveStudent() {
-  if (!isAdmin()) return;
-  const st = db.students.find(x => x.reg === $('#esSel').value); if (!st) return;
-  const name = $('#esName').value.trim().replace(/\s+/g, ' ');
-  if (name.length < 2) return toast('Enter a name with at least 2 characters.');
-  const prog = $('#esPrg').value, sem = +$('#esSem').value, moved = prog !== st.prog || sem !== st.sem;
-  if (moved && $('#esClr').checked) { fullRecs = true; db.records = db.records.filter(r => r.reg !== st.reg); }
-  const ct = readContact('#esEmail', '#esWa'); if (ct.err) return toast(ct.err);
-  Object.assign(st, { name, prog, sem, email: ct.email, wa: ct.wa }); save(); render(); toast(name + ' updated.');
 }
 function serverSeed() {
   if (!isAdmin()) return; if (!twice('seed')) return; net.ready = true; coreDirty = true; fullRecs = true; push(); }
