@@ -123,7 +123,8 @@ let user = null;
 let tab = 'dash';
 let f = { q: '', prog: '', course: '', sem: '', risk: '' };
 let sort = { k: 'pct', d: 1 };
-try { document.documentElement.dataset.theme = localStorage.getItem('abp_theme') || 'light'; } catch (e) { }
+document.documentElement.dataset.skin = 'navy';
+try { document.documentElement.dataset.theme = localStorage.getItem('abp_theme') || 'light'; const k = localStorage.getItem('abp_skin'); if (k) document.documentElement.dataset.skin = k; } catch (e) { }
 
 /* ---------- storage ---------- */
 function load() {
@@ -326,16 +327,18 @@ function logout() { user = null; $('#app').hidden = true; $('#login').hidden = f
 const ICONS = {"dash": "<rect x=\"3\" y=\"3\" width=\"7\" height=\"9\"/><rect x=\"14\" y=\"3\" width=\"7\" height=\"5\"/><rect x=\"14\" y=\"12\" width=\"7\" height=\"9\"/><rect x=\"3\" y=\"16\" width=\"7\" height=\"5\"/>", "students": "<path d=\"M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2\"/><circle cx=\"9\" cy=\"7\" r=\"4\"/><path d=\"M23 21v-2a4 4 0 0 0-3-3.87\"/><path d=\"M16 3.13a4 4 0 0 1 0 7.75\"/>", "programs": "<path d=\"M4 19.5A2.5 2.5 0 0 1 6.5 17H20\"/><path d=\"M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z\"/>", "faculty": "<path d=\"M22 10L12 5 2 10l10 5 10-5z\"/><path d=\"M6 12v5c3 2 9 2 12 0v-5\"/>", "entry": "<path d=\"M9 11l3 3L22 4\"/><path d=\"M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11\"/>", "alerts": "<path d=\"M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9\"/><path d=\"M13.73 21a2 2 0 0 1-3.46 0\"/>", "settings": "<line x1=\"4\" y1=\"21\" x2=\"4\" y2=\"14\"/><line x1=\"4\" y1=\"10\" x2=\"4\" y2=\"3\"/><line x1=\"12\" y1=\"21\" x2=\"12\" y2=\"12\"/><line x1=\"12\" y1=\"8\" x2=\"12\" y2=\"3\"/><line x1=\"20\" y1=\"21\" x2=\"20\" y2=\"16\"/><line x1=\"20\" y1=\"12\" x2=\"20\" y2=\"3\"/><line x1=\"1\" y1=\"14\" x2=\"7\" y2=\"14\"/><line x1=\"9\" y1=\"8\" x2=\"15\" y2=\"8\"/><line x1=\"17\" y1=\"16\" x2=\"23\" y2=\"16\"/>", "acct": "<path d=\"M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2\"/><circle cx=\"12\" cy=\"7\" r=\"4\"/>", "me": "<rect x=\"3\" y=\"4\" width=\"18\" height=\"18\" rx=\"2\"/><path d=\"M16 2v4M8 2v4M3 10h18\"/>"};
 const ic = k => '<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + ICONS[k] + '</svg>';
 function head(t, sub) { return `<header class="ph"><h2>${t}</h2>${sub ? `<p class="small">${sub}</p>` : ''}</header>`; }
-function ring(p) {
+const initials = n => String(n).split(/\s+/).filter(Boolean).map(w => w[0]).slice(0, 2).join('').toUpperCase();
+function ring(p, fg = '#fff', bg = 'rgba(255,255,255,.28)', tx = '#fff') {
   const C = 2 * Math.PI * 52, d = Math.min(100, Math.max(0, p)) / 100 * C;
-  return `<svg viewBox="0 0 120 120" width="128" role="img" aria-label="Overall attendance ${p.toFixed(0)} percent"><circle cx="60" cy="60" r="52" fill="none" stroke="rgba(255,255,255,.28)" stroke-width="12"/><circle cx="60" cy="60" r="52" fill="none" stroke="#fff" stroke-width="12" stroke-linecap="round" stroke-dasharray="${d} ${C}" transform="rotate(-90 60 60)"/><text x="60" y="69" text-anchor="middle" font-size="27" font-weight="800" fill="#fff">${p.toFixed(0)}%</text></svg>`;
+  return `<svg viewBox="0 0 120 120" width="128" role="img" aria-label="Overall attendance ${p.toFixed(0)} percent"><circle cx="60" cy="60" r="52" fill="none" stroke="${bg}" stroke-width="12"/><circle cx="60" cy="60" r="52" fill="none" stroke="${fg}" stroke-width="12" stroke-linecap="round" stroke-dasharray="${d} ${C}" transform="rotate(-90 60 60)"/><text x="60" y="69" text-anchor="middle" font-size="27" font-weight="800" fill="${tx}">${p.toFixed(0)}%</text></svg>`;
 }
 function render() {
   const tabs = user.role === 'admin'
     ? [['dash', 'Dashboard'], ['students', 'Students'], ['programs', 'Programs'], ['faculty', 'Faculty' + (db.pending.length ? ' (' + db.pending.length + ')' : '')], ['entry', 'Add attendance'], ['alerts', 'Alerts'], ['settings', 'Settings'], ['acct', 'Account']]
     : user.role === 'faculty' ? [['students', 'Students'], ['entry', 'Add attendance'], ['acct', 'Account']] : [['me', 'My attendance'], ['acct', 'Account']];
   $('#nav').innerHTML = tabs.map(t => `<button class="${t[0] === tab ? 'on' : ''}" onclick="go('${t[0]}')">${ic(t[0])}${t[1]}</button>`).join('');
-  $('#whoami').textContent = user.name + (user.reg ? ' (' + user.reg + ')' : '');
+  $('#whoami').textContent = user.name; $('#avatar').textContent = initials(user.name);
+  $('#nav').style.setProperty('--n', Math.min(tabs.length, 4));
   $('#netst').hidden = user.role !== 'admin';
   $('#view').innerHTML = { dash, students, programs, faculty, entry, alerts, settings, me, acct }[tab]();
   if (tab === 'entry') fillCourses();
@@ -354,30 +357,35 @@ function dash() {
     const a = r.reduce((x, y) => x + y.pct, 0) / r.length;
     return `<div class="bar"><span>${esc(p)} (${r.length})</span><div class="track"><i class="bg-${level(a)}" style="width:${a}%"></i></div><b>${a.toFixed(0)}%</b></div>`;
   }).join('');
-  const hero = !all.length ? '' : high ? `<div class="card hero s-high"><div><span class="lbl">Needs attention</span><h3>${high} student${high === 1 ? ' is' : 's are'} at high risk</h3><p>${watch} more on watch. Review them first and send a reminder.</p></div><button class="btn light" onclick="f.risk='high';go('students')">Review high risk students</button></div>`
-    : `<div class="card hero s-safe"><div><span class="lbl">All clear</span><h3>No student is at high risk</h3><p>${watch} on watch.</p></div></div>`;
-  return `${head('Dashboard', 'Attendance overview for every program')}${empty}${hero}<div class="stats">
-    <div class="card stat kpi"><span class="lbl">Students</span><b>${all.length}</b></div>
-    <div class="card stat kpi"><span class="lbl">Average attendance</span><b>${avg.toFixed(1)}%</b></div>
-    <div class="card stat kpi k-high"><span class="lbl">High risk</span><b>${high}</b></div>
-    <div class="card stat kpi k-watch"><span class="lbl">On watch</span><b>${watch}</b></div></div>
-    <div class="grid2" style="margin-bottom:1rem"><div class="card"><h3>Daily attendance trend</h3>${lineChart()}</div><div class="card"><h3>Risk split</h3>${donut(all.length - high - watch, watch, high)}</div></div>
-    <div class="card"><h3>Average attendance by program</h3><div class="bars">${bars}</div>
-    <p class="small">Safe is ${db.thr}% or more. Watch is within 10 points below. High risk is lower than that.</p></div>`;
+  const hero = !all.length ? '' : high ? `<div class="card hero s-high c8"><div><span class="lbl">Needs attention</span><h3>${high} student${high === 1 ? ' is' : 's are'} at high risk</h3><p>${watch} more on watch. Review them first and send a reminder.</p></div><button class="btn light" onclick="f.risk='high';go('students')">Review high risk students</button></div>`
+    : `<div class="card hero s-safe c8"><div><span class="lbl">All clear</span><h3>No student is at high risk</h3><p>${watch} on watch.</p></div></div>`;
+  const top = all.filter(x => level(x.pct) !== 'safe').sort((x, y) => x.pct - y.pct).slice(0, 5);
+  const list = top.length ? top.map(x => `<div class="rl"><span class="av ${level(x.pct)}">${initials(x.name)}</span><div class="grow"><b>${esc(x.name)}</b><span class="small">${esc(x.prog)} · Sem ${x.sem}</span></div><div class="pct"><b>${x.pct.toFixed(0)}%</b><div class="pbar"><i class="bg-${level(x.pct)}" style="width:${x.pct}%"></i></div></div><button class="link" onclick="showHistory('${x.reg}')">Open</button></div>`).join('') : '<p class="small">Nobody is below the limit right now.</p>';
+  return `${head('Dashboard', 'Attendance overview for every program')}${empty}<div class="bento">${hero}
+    <div class="card c4"><span class="lbl">Average attendance</span><div class="ringbox">${ring(avg, 'var(--accent)', 'var(--line)', 'var(--ink)')}</div></div>
+    <div class="card stat kpi c3"><span class="lbl">Students</span><b>${all.length}</b></div>
+    <div class="card stat kpi k-safe c3"><span class="lbl">Safe</span><b>${all.length - high - watch}</b></div>
+    <div class="card stat kpi k-watch c3"><span class="lbl">On watch</span><b>${watch}</b></div>
+    <div class="card stat kpi k-high c3"><span class="lbl">High risk</span><b>${high}</b></div>
+    <div class="card c7"><h3>Daily attendance trend</h3>${lineChart()}</div>
+    <div class="card c5"><h3>Risk split</h3>${donut(all.length - high - watch, watch, high)}</div>
+    <div class="card c7"><h3>Needs attention</h3><div class="rowlist">${list}</div></div>
+    <div class="card c5"><h3>Average attendance by program</h3><div class="bars">${bars}</div>
+    <p class="small">Safe is ${db.thr}% or more. Watch is within 10 points below. High risk is lower than that.</p></div></div>`;
 }
 
 function lineChart() {
   const by = {};
   db.records.forEach(r => { (by[r.date] = by[r.date] || []).push(r.p ? 100 : 0); });
-  const d = Object.keys(by).sort().slice(-20), W = 400, H = 130;
+  const d = Object.keys(by).sort().slice(-20), W = 520, H = 150;
   if (d.length < 2) return '<p class="small">Add attendance on at least two dates to see a trend.</p>';
   const pts = d.map((k, i) => [i / (d.length - 1) * W, H - by[k].reduce((a, b) => a + b, 0) / by[k].length / 100 * H]);
   const ty = H - db.thr / 100 * H;
   return `<svg viewBox="0 0 ${W} ${H + 18}" role="img" aria-label="Daily average attendance">
     <line x1="0" x2="${W}" y1="${ty}" y2="${ty}" stroke="var(--high)" stroke-dasharray="5 4"/>
-    <text x="4" y="${ty - 4}" font-size="10" fill="var(--high)">limit ${db.thr}%</text>
+    <text x="4" y="${ty - 4}" font-size="12" fill="var(--high)">limit ${db.thr}%</text>
     <polyline fill="none" stroke="var(--accent)" stroke-width="3" points="${pts.map(p => p.join(',')).join(' ')}"/>
-    <text x="0" y="${H + 14}" font-size="10" fill="var(--mute)">${d[0]}</text><text x="${W}" y="${H + 14}" font-size="10" text-anchor="end" fill="var(--mute)">${d[d.length - 1]}</text></svg>`;
+    <text x="0" y="${H + 14}" font-size="12" fill="var(--mute)">${d[0]}</text><text x="${W}" y="${H + 14}" font-size="12" text-anchor="end" fill="var(--mute)">${d[d.length - 1]}</text></svg>`;
 }
 function donut(a, b, c) {
   const C = 251.3, n = a + b + c || 1; let off = 0;
@@ -391,19 +399,21 @@ function donut(a, b, c) {
 
 function students() {
   const opt = (v, t, cur) => `<option value="${v}" ${String(cur) === String(v) ? 'selected' : ''}>${t}</option>`;
+  const keepRisk = f.risk; f.risk = ''; const base = rows(); f.risk = keepRisk;
+  const cnt = k => k ? base.filter(x => level(x.pct) === k).length : base.length;
+  const tabsHtml = [['', 'All'], ['high', 'High risk'], ['watch', 'Watch'], ['safe', 'Safe']].map(t => `<button class="${f.risk === t[0] ? 'on' : ''}" onclick="f.risk='${t[0]}';render()">${t[1]}<b>${cnt(t[0])}</b></button>`).join('');
   const r = rows();
-  const body = r.length ? r.map(s => `<tr><td>${esc(s.name)}</td><td>${s.reg}</td><td>${esc(s.prog)} · Sem ${s.sem}</td><td>${s.att}/${s.held}</td>
+  const body = r.length ? r.map(s => `<tr><td><div class="who2"><span class="av ${level(s.pct)}">${initials(s.name)}</span><div><b>${esc(s.name)}</b><span class="small">${s.reg}</span></div></div></td><td>${esc(s.prog)} · Sem ${s.sem}</td><td>${s.att}/${s.held}</td>
     <td><b>${s.pct.toFixed(1)}%</b><div class="pbar"><i class="bg-${level(s.pct)}" style="width:${s.pct}%"></i></div></td><td>${arrow(s.tr)}</td><td>${badge(s.pct)}</td><td>${need(s) ? need(s) + ' classes' : '-'}</td>
     <td><button class="link" onclick="showHistory('${s.reg}')">History</button>${isAdmin() ? ` <button class="link" onclick="showEditStudent('${s.reg}')">Edit</button> <button class="link dl" onclick="showRemoveStudent('${s.reg}')">Remove</button>` : ''}</td></tr>`).join('')
-    : '<tr><td colspan="9">No students match these filters. Clear a filter to see more.</td></tr>';
-  return `${head('Students', 'Search, sort and filter. Open a student to see history and a what-if forecast. Admins can add, edit and remove students here.')}<div class="filters">
+    : '<tr><td colspan="8">No students match these filters. Clear a filter to see more.</td></tr>';
+  return `${head('Students', 'Search, sort and filter. Open a student to see history and a what-if forecast. Admins can add, edit and remove students here.')}<div class="seg2">${tabsHtml}</div><div class="filters">
     <input placeholder="Search name or reg. no." value="${esc(f.q)}" oninput="f.q=this.value;keep(this)" aria-label="Search">
     <select onchange="f.prog=this.value;f.course='';render()" aria-label="Program">${opt('', 'All programs', f.prog)}${Object.keys(db.programs).map(p => opt(p, p, f.prog)).join('')}</select>
     <select onchange="f.course=this.value;render()" aria-label="Subject">${opt('', 'All courses', f.course)}${COURSES.filter(c => !f.prog || c.prog === f.prog).map(c => opt(c.code, c.code + ' ' + c.name, f.course)).join('')}</select>
     <select onchange="f.sem=this.value;render()" aria-label="Semester">${opt('', 'All semesters', f.sem)}${[...new Set(COURSES.map(c => c.sem))].sort((a, b) => a - b).map(n => opt(n, 'Semester ' + n, f.sem)).join('')}</select>
-    <select onchange="f.risk=this.value;render()" aria-label="Risk">${opt('', 'All risk levels', f.risk)}${opt('high', 'High risk', f.risk)}${opt('watch', 'Watch', f.risk)}${opt('safe', 'Safe', f.risk)}</select>
     ${isAdmin() ? '<button class="btn" onclick="showAddStudent()">+ Add student</button>' : ''}<button class="btn ghost" onclick="exportCSV()">Export CSV</button><button class="btn ghost" onclick="window.print()">Print report</button></div>
-    <div class="tw"><table><thead><tr>${[['name','Name'],['reg','Reg. no.'],['prog','Program'],['att','Attended'],['pct','%'],['tr','Trend']].map(h => `<th><button class="link" onclick="sortBy('${h[0]}')">${h[1]}${sort.k === h[0] ? (sort.d > 0 ? ' ▲' : ' ▼') : ''}</button></th>`).join('')}<th>Risk</th><th>To reach ${db.thr}%</th><th></th></tr></thead><tbody>${body}</tbody></table></div>`;
+    <div class="tw"><table><thead><tr>${[['name','Student'],['prog','Program'],['att','Attended'],['pct','%'],['tr','Trend']].map(h => `<th><button class="link" onclick="sortBy('${h[0]}')">${h[1]}${sort.k === h[0] ? (sort.d > 0 ? ' ▲' : ' ▼') : ''}</button></th>`).join('')}<th>Risk</th><th>To reach ${db.thr}%</th><th></th></tr></thead><tbody>${body}</tbody></table></div>`;
 }
 // re-render the table while typing but keep the cursor in the search box
 function sortBy(k) { sort = { k, d: sort.k === k ? -sort.d : 1 }; render(); }
@@ -578,8 +588,8 @@ function importCSV(file) {
 function alerts() {
   const list = db.students.map(s => ({ ...s, ...stats(s.reg) })).filter(s => level(s.pct) !== 'safe').sort((a, b) => a.pct - b.pct);
   const html = list.map(s => `<div class="card alert ${level(s.pct) === 'watch' ? 'watch' : ''} ${db.notified[s.reg] ? 'done' : ''}">
-    <div><b>${esc(s.name)}</b> (${s.reg}) is at ${s.pct.toFixed(1)}% ${badge(s.pct)}<br>
-    <span class="small">Needs ${need(s)} more classes in a row to reach ${db.thr}%.</span><br><span class="small">WhatsApp: ${s.wa ? s.wa : 'not saved'} &nbsp;|&nbsp; Email: ${s.email ? esc(s.email) : 'not saved'}</span></div>
+    <div class="who2"><span class="av ${level(s.pct)}">${initials(s.name)}</span><div><b>${esc(s.name)}</b> (${s.reg}) is at ${s.pct.toFixed(1)}% ${badge(s.pct)}<br>
+    <span class="small">Needs ${need(s)} more classes in a row to reach ${db.thr}%.</span><br><span class="small">WhatsApp: ${s.wa ? s.wa : 'not saved'} &nbsp;|&nbsp; Email: ${s.email ? esc(s.email) : 'not saved'}</span></div></div>
     <button class="link" onclick="copyMsg('${s.reg}')">Copy message</button><a class="link" target="_blank" rel="noopener" href="https://wa.me/${s.wa ? '91' + s.wa : ''}?text=${encodeURIComponent(alertMsg(s))}">WhatsApp</a><a class="link" href="mailto:${s.email ? esc(s.email) : ''}?subject=${encodeURIComponent('Attendance alert')}&body=${encodeURIComponent(alertMsg(s))}">Email</a><button class="btn ${db.notified[s.reg] ? 'ghost' : ''}" onclick="notify('${s.reg}')">${db.notified[s.reg] ? 'Notified' : 'Mark as notified'}</button></div>`).join('');
   return `${head('Alerts', 'Students below the limit, with a ready message to send.')}${html || '<p>No students are below the limit right now.</p>'}`;
 }
@@ -591,7 +601,7 @@ function copyMsg(reg) {
 function notify(reg) { db.notified[reg] = !db.notified[reg]; save(); render(); }
 
 function settings() {
-  return `${head('Settings', 'Attendance limit, bulk import, backup and server. Add, edit or remove students in the Students tab.')}<div class="card stack"><h3>Attendance limit</h3><label>Minimum attendance (%)<br>
+  return `${head('Settings', 'Attendance limit, bulk import, backup and server. Add, edit or remove students in the Students tab.')}<div class="set-grid"><div class="card stack"><h3>Attendance limit</h3><label>Minimum attendance (%)<br>
     <input type="number" min="50" max="95" value="${db.thr}" onchange="setThr(this.value)"></label>
     </div><div class="card stack"><h3>Clear a student's password</h3><div class="filters"><select id="rpSel" aria-label="Student">${db.students.map(s => `<option value="${s.reg}">${esc(s.name)} (${s.reg})</option>`).join('')}</select>
     <button class="btn ghost" onclick="resetPw()">Clear password</button></div>
@@ -604,7 +614,14 @@ function settings() {
     </div><div class="card stack"><h3>Backup and restore</h3><div class="filters"><button class="btn" onclick="backup(false)">Download backup</button><button class="btn ghost" onclick="backup(true)">Copy backup text</button></div>
     <input type="file" accept=".json" onchange="restoreFile(this.files[0])" aria-label="Backup file">
     <textarea id="bkTxt" rows="3" placeholder="Or paste backup text here" style="width:100%"></textarea><button class="btn ghost" onclick="restoreText($('#bkTxt').value)">Restore from pasted text</button>
-    </div><div class="card stack danger-zone"><h3>Danger zone</h3><p class="small">Reset deletes all students, faculty, attendance and accounts, for every phone. It cannot be undone.</p><button class="btn danger" onclick="resetAll()">Reset portal (delete everything)</button></div>`;
+    </div><div class="card stack danger-zone"><h3>Danger zone</h3><p class="small">Reset deletes all students, faculty, attendance and accounts, for every phone. It cannot be undone.</p><button class="btn danger" onclick="resetAll()">Reset portal (delete everything)</button></div></div>`;
+}
+// two skins: Midnight (navy, default) and Campus (orange)
+function toggleSkin() {
+  const k = document.documentElement.dataset.skin === 'navy' ? 'campus' : 'navy';
+  document.documentElement.dataset.skin = k;
+  try { localStorage.setItem('abp_skin', k); } catch (e) { }
+  toast(k === 'navy' ? 'Midnight theme on.' : 'Campus theme on.');
 }
 function toggleTheme() {
   const t = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
@@ -720,13 +737,12 @@ function me() {
       <div class="top"><b style="font-size:1.9rem">${t.pct.toFixed(1)}%</b>${badge(t.pct)}</div><div class="pbar"><i class="bg-${level(t.pct)}" style="width:${t.pct}%"></i></div>
       <p class="small">${t.att} of ${t.held} classes attended. ${planText(t)}</p></div>`;
   }).join('');
-  const log = db.records.filter(x => x.reg === st.reg).sort((a, b) => b.date.localeCompare(a.date)).slice(0, 30)
+  const log = db.records.filter(x => x.reg === st.reg).sort((a, b) => b.date.localeCompare(a.date)).slice(0, 12)
     .map(x => `<tr><td>${x.date}</td><td>${x.course}</td><td>${stat(x)}</td></tr>`).join('');
   const msg = all.pct >= db.thr ? `You are above the ${db.thr}% limit. Keep it up.` : `You are below the ${db.thr}% limit. Attend your next ${need(all)} classes in a row to get back on track.`;
   return `${head('Hello, ' + esc(st.name.split(' ')[0]), esc(st.prog) + ', Semester ' + st.sem)}
     <div class="card hero s-${lv}"><div class="row">${ring(all.pct)}<div><span class="lbl">Overall attendance</span><h3>${LABEL[lv]}</h3><p>${msg}</p></div></div></div>
-    <div class="grid2">${cards}</div><h3 class="sec">Day by day</h3>${heat(st.reg)}<h3 class="sec">Recent classes</h3>
-    <div class="tw"><table style="min-width:0"><thead><tr><th>Date</th><th>Course</th><th>Status</th></tr></thead><tbody>${log}</tbody></table></div>`;
+    <div class="grid2">${cards}</div><div class="bento top" style="margin-top:1rem"><div class="card c5"><h3>Day by day</h3>${heat(st.reg)}</div><div class="card c7"><h3>Recent classes</h3><div class="tw"><table style="min-width:0"><thead><tr><th>Date</th><th>Course</th><th>Status</th></tr></thead><tbody>${log}</tbody></table></div></div></div>`;
 }
 
 
