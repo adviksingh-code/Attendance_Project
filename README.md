@@ -31,6 +31,8 @@ Colleges usually notice poor attendance only after a student has already missed 
 
 Students and faculty can only change their own password. Everything else is admin only.
 
+**Themes:** seven looks to choose from (Midnight, Campus, Emerald, Violet, Ocean, Rose and Graphite), each in light and dark mode. Use *Change theme* (palette button) and the moon button on the sign-in page or in the sidebar.
+
 ## How the risk is decided
 
 | Level | Rule (default limit 75%) |

@@ -124,7 +124,7 @@ let tab = 'dash';
 let f = { q: '', prog: '', course: '', sem: '', risk: '' };
 let sort = { k: 'pct', d: 1 };
 document.documentElement.dataset.skin = 'navy';
-try { document.documentElement.dataset.theme = localStorage.getItem('abp_theme') || 'light'; const k = localStorage.getItem('abp_skin'); if (k) document.documentElement.dataset.skin = k; } catch (e) { }
+try { document.documentElement.dataset.theme = localStorage.getItem('abp_theme') || 'light'; const k = localStorage.getItem('abp_skin'); if (['navy', 'campus', 'emerald', 'violet', 'ocean', 'rose', 'graphite'].includes(k)) document.documentElement.dataset.skin = k; } catch (e) { }
 
 /* ---------- storage ---------- */
 function load() {
@@ -616,12 +616,19 @@ function settings() {
     <textarea id="bkTxt" rows="3" placeholder="Or paste backup text here" style="width:100%"></textarea><button class="btn ghost" onclick="restoreText($('#bkTxt').value)">Restore from pasted text</button>
     </div><div class="card stack danger-zone"><h3>Danger zone</h3><p class="small">Reset deletes all students, faculty, attendance and accounts, for every phone. It cannot be undone.</p><button class="btn danger" onclick="resetAll()">Reset portal (delete everything)</button></div></div>`;
 }
-// two skins: Midnight (navy, default) and Campus (orange)
+// themes: pick one from the list. Light and dark mode is a separate switch.
+const SKINS = [['navy', 'Midnight', '#4f46e5', '#0a1122'], ['campus', 'Campus', '#c2410c', '#2a211c'], ['emerald', 'Emerald', '#047857', '#06231b'],
+  ['violet', 'Violet', '#7c3aed', '#150d33'], ['ocean', 'Ocean', '#0369a1', '#061f33'], ['rose', 'Rose', '#be123c', '#2a0c18'], ['graphite', 'Graphite', '#3f3f46', '#18181b']];
 function toggleSkin() {
-  const k = document.documentElement.dataset.skin === 'navy' ? 'campus' : 'navy';
+  const cur = document.documentElement.dataset.skin;
+  $('#dlgBody').innerHTML = `<div class="dlgform"><h3>Choose a theme</h3><div class="swatches">${SKINS.map(k => `<button class="sw ${cur === k[0] ? 'on' : ''}" onclick="setSkin('${k[0]}')"><i style="background:linear-gradient(135deg,${k[2]} 50%,${k[3]} 50%)"></i>${k[1]}</button>`).join('')}</div>
+    <p class="small">Light and dark mode has its own button (the moon).</p></div>`;
+  dlg.showModal();
+}
+function setSkin(k) {
   document.documentElement.dataset.skin = k;
   try { localStorage.setItem('abp_skin', k); } catch (e) { }
-  toast(k === 'navy' ? 'Midnight theme on.' : 'Campus theme on.');
+  dlg.close(); toast((SKINS.find(x => x[0] === k) || [0, k])[1] + ' theme on.');
 }
 function toggleTheme() {
   const t = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
